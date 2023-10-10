@@ -1,33 +1,88 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset='UTF-8'/>
-  <meta name='viewport' content='width=device-width, initial-scale=1.0'/>
-  <meta http-equiv='X-UA-Compatible' content='ie=edge'/>
-  <title>Document</title>
-  <script src='js/index.js'></script>
-  <link rel='stylesheet' href='index.css'/>
+    <meta charset="UTF-8">
+    <title>GitHub User and Repository Search</title>
 </head>
 <body>
-  <div id='main'>
-
-    <h2>GitHub Search</h2>
-
-    <form id='github-form'>
-      <input id='search' type='text' name='search'>
-      <input type='submit' name='submit'/>
+    <h1>GitHub User and Repository Search</h1>
+    <form id="search-form">
+        <input type="text" id="search-input" placeholder="Enter a GitHub username or repository">
+        <button type="submit">Search</button>
     </form>
+    <button id="toggle-search-type">Toggle Search Type</button>
+    <div id="results"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchForm = document.getElementById('search-form');
+            const searchInput = document.getElementById('search-input');
+            const toggleButton = document.getElementById('toggle-search-type');
+            const results = document.getElementById('results');
+            let currentSearchType = 'user'; // Default search type
+            
+            // Function to fetch data based on search type (user or repo)
+            async function fetchData(keyword) {
+                try {
+                    const response = await fetch(`https://api.github.com/search/${currentSearchType}s?q=${keyword}`, {
+                        headers: {
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.items; // Extract relevant data items based on search type
+                    } else {
+                        throw new Error('Failed to fetch data');
+                    }
+                } catch (error) {
+                    console.error('Error fetching data:', error);
+                }
+            }
 
-    <div id='github-container'>
-      <ul id='user-list'>
+            // Function to display data
+            function displayData(data) {
+                let html = '';
+                if (currentSearchType === 'user') {
+                    html = data.map(user => `
+                        <div>
+                            <h2>${user.login}</h2>
+                            <img src="${user.avatar_url}" alt="${user.login}" width="100">
+                            <a href="${user.html_url}" target="_blank">View Profile</a>
+                        </div>
+                    `).join('');
+                } else if (currentSearchType === 'repo') {
+                    html = data.map(repo => `
+                        <div>
+                            <h3>${repo.name}</h3>
+                            <p>${repo.description || 'No description available'}</p>
+                            <a href="${repo.html_url}" target="_blank">View Repository</a>
+                        </div>
+                    `).join('');
+                }
+                results.innerHTML = html;
+            }
 
-      </ul>
+            // Handle form submission
+            searchForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const keyword = searchInput.value.trim();
 
-      <ul id='repos-list'>
+                if (keyword) {
+                    const data = await fetchData(keyword);
+                    if (data) {
+                        displayData(data);
+                    }
+                }
+            });
 
-      </ul>
-    </div>
-
-  </div>
-
+            // Handle search type toggle button click
+            toggleButton.addEventListener('click', () => {
+                currentSearchType = currentSearchType === 'user' ? 'repo' : 'user';
+                searchInput.placeholder = `Search ${currentSearchType === 'user' ? 'users' : 'repositories'} by keyword`;
+            });
+        });
+    </script>
 </body>
 </html>
